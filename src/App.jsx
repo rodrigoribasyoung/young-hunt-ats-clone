@@ -3,7 +3,7 @@ import {
   LayoutDashboard, Users, Briefcase, Settings, Plus, Search, 
   FileText, MapPin, ChevronRight, CheckCircle, Filter, 
   UserPlus, Trophy, Menu, X, LogOut, Lock, Loader2, Edit3, Trash2,
-  Building2, Tag, Mail, Save, AlertTriangle, UploadCloud, ChevronLeft, Calendar, Phone
+  Building2, Tag, Mail, Save, AlertTriangle, UploadCloud, ChevronLeft, Calendar, Phone, DollarSign
 } from 'lucide-react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer 
@@ -117,7 +117,7 @@ const SettingsPage = ({ companies, onAddCompany, onDelCompany, cities, onAddCity
         <div className="relative">
            <input type="file" accept=".csv" onChange={onImportCSV} id="csvUpload" className="hidden" disabled={isImporting} />
            <label htmlFor="csvUpload" className={`cursor-pointer bg-brand-cyan text-brand-dark font-bold px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-cyan-400 transition-colors ${isImporting ? 'opacity-50 cursor-not-allowed' : ''}`}>
-             {isImporting ? <Loader2 className="animate-spin" size={18} /> : <UploadCloud size={18} />} {isImporting ? 'Importando...' : 'Importar CSV'}
+             {isImporting ? <Loader2 className="animate-spin" size={18} /> : <UploadCloud size={18} />} {isImporting ? 'Importando...' : 'Importar CSV (Backup)'}
            </label>
         </div>
       </div>
@@ -143,13 +143,18 @@ const LoginScreen = ({ onLogin, error }) => (
   </div>
 );
 
-// 4. Modal de Candidato Completo (Card/Formulário)
+// 4. Modal de Candidato Completo (Atualizado com TODOS os campos)
 const CandidateModal = ({ candidate, onClose, onSave, jobs, isSaving }) => {
   const [d, setD] = useState({ ...candidate });
   const [activeSection, setActiveSection] = useState('pessoal');
 
-  const Input = ({ label, field, type="text" }) => (
-    <div className="mb-3"><label className="block text-xs font-bold text-brand-cyan uppercase mb-1.5">{label}</label><input type={type} className="w-full bg-brand-dark border border-brand-border p-2.5 rounded-lg text-sm text-white focus:border-brand-orange outline-none" value={d[field]||''} onChange={e => setD({...d, [field]: e.target.value})} /></div>
+  // Campos padrão que têm input visual (para não repetir na aba "Outros")
+  const standardFields = ['id', 'fullName', 'photoUrl', 'birthDate', 'age', 'email', 'phone', 'city', 'maritalStatus', 'hasLicense', 'childrenCount', 'freeField', 'education', 'schoolingLevel', 'institution', 'interestAreas', 'experience', 'cvUrl', 'portfolioUrl', 'jobId', 'status', 'source', 'referral', 'feedback', 'createdAt', 'imported', 'typeOfApp', 'salaryExpectation', 'canRelocate', 'courses', 'graduationDate', 'isStudying', 'references', 'firstInterviewDate', 'secondInterviewDate', 'testData', 'sheetId', 'original_timestamp'];
+  
+  const extraFields = Object.keys(d).filter(key => !standardFields.includes(key));
+
+  const Input = ({ label, field, type="text", placeholder="" }) => (
+    <div className="mb-3"><label className="block text-xs font-bold text-brand-cyan uppercase mb-1.5">{label}</label><input type={type} className="w-full bg-brand-dark border border-brand-border p-2.5 rounded-lg text-sm text-white focus:border-brand-orange outline-none" placeholder={placeholder} value={d[field]||''} onChange={e => setD({...d, [field]: e.target.value})} /></div>
   );
   const TextArea = ({ label, field }) => (
     <div className="mb-3"><label className="block text-xs font-bold text-brand-cyan uppercase mb-1.5">{label}</label><textarea className="w-full bg-brand-dark border border-brand-border p-2.5 rounded-lg text-sm text-white h-24 focus:border-brand-orange outline-none" value={d[field]||''} onChange={e => setD({...d, [field]: e.target.value})} /></div>
@@ -159,23 +164,29 @@ const CandidateModal = ({ candidate, onClose, onSave, jobs, isSaving }) => {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
       <div className="bg-brand-card rounded-xl shadow-2xl w-full max-w-4xl h-[90vh] flex flex-col border border-brand-border text-white">
         <div className="px-6 py-4 border-b border-brand-border flex justify-between items-center bg-brand-dark/50">
-          <div><h3 className="font-bold text-xl">{candidate?.id ? 'Ficha do Candidato' : 'Novo Talento'}</h3><p className="text-xs text-brand-orange">ID: {candidate?.id || 'Novo'}</p></div>
+          <div><h3 className="font-bold text-xl">{d.id ? 'Ficha do Candidato' : 'Novo Talento'}</h3><p className="text-xs text-brand-orange">ID: {d.id || 'Gerando...'}</p></div>
           <button onClick={onClose}><X size={24} className="text-slate-400 hover:text-white"/></button>
         </div>
-        <div className="flex border-b border-brand-border">
-          {['pessoal', 'profissional', 'processo'].map(tab => (
-             <button key={tab} onClick={() => setActiveSection(tab)} className={`flex-1 py-3 text-sm font-bold uppercase tracking-wide transition-colors ${activeSection === tab ? 'text-brand-orange border-b-2 border-brand-orange bg-brand-orange/5' : 'text-slate-500 hover:text-slate-300'}`}>{tab}</button>
+        <div className="flex border-b border-brand-border overflow-x-auto">
+          {['pessoal', 'profissional', 'processo', 'outros dados'].map(tab => (
+             <button key={tab} onClick={() => setActiveSection(tab)} className={`flex-1 py-3 px-4 text-sm font-bold uppercase tracking-wide whitespace-nowrap transition-colors ${activeSection === tab ? 'text-brand-orange border-b-2 border-brand-orange bg-brand-orange/5' : 'text-slate-500 hover:text-slate-300'}`}>{tab}</button>
           ))}
         </div>
         <div className="p-8 overflow-y-auto custom-scrollbar flex-1 bg-brand-dark">
           {activeSection === 'pessoal' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="md:col-span-2 flex items-center gap-4 mb-2">
+                 <div className="w-20 h-20 rounded-full bg-slate-700 overflow-hidden border-2 border-brand-border shrink-0">
+                    {d.photoUrl ? <img src={d.photoUrl} className="w-full h-full object-cover"/> : <div className="w-full h-full flex items-center justify-center"><Users/></div>}
+                 </div>
+                 <div className="flex-1"><Input label="Link da Foto" field="photoUrl" placeholder="https://..." /></div>
+              </div>
               <Input label="Nome Completo" field="fullName" />
-              <div className="grid grid-cols-2 gap-4"><Input label="Nascimento" field="birthDate" type="date" /><Input label="Idade" field="age" type="number" /></div>
+              <div className="grid grid-cols-2 gap-4"><Input label="Nascimento" field="birthDate" /><Input label="Idade" field="age" type="number" /></div>
               <Input label="E-mail" field="email" type="email" />
               <Input label="Celular / WhatsApp" field="phone" />
               <Input label="Cidade" field="city" />
-              <Input label="Estado Civil" field="maritalStatus" />
+              <div className="grid grid-cols-2 gap-4"><Input label="Estado Civil" field="maritalStatus" /><Input label="Filhos" field="childrenCount" /></div>
               <div className="mb-3"><label className="block text-xs font-bold text-brand-cyan uppercase mb-1.5">Possui CNH?</label><select className="w-full bg-brand-dark border border-brand-border p-2.5 rounded-lg text-sm text-white" value={d.hasLicense||''} onChange={e => setD({...d, hasLicense: e.target.value})}><option value="">Selecione</option><option value="Sim">Sim</option><option value="Não">Não</option></select></div>
             </div>
           )}
@@ -183,10 +194,13 @@ const CandidateModal = ({ candidate, onClose, onSave, jobs, isSaving }) => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                <div className="md:col-span-2"><TextArea label="Resumo / Bio" field="freeField" /></div>
                <Input label="Formação Acadêmica" field="education" />
+               <Input label="Nível Escolaridade" field="schoolingLevel" />
                <Input label="Instituição" field="institution" />
-               <div className="md:col-span-2"><TextArea label="Áreas de Interesse" field="interestAreas" /><TextArea label="Experiência Anterior" field="experience" /></div>
+               <div className="grid grid-cols-2 gap-4"><Input label="Formatura" field="graduationDate" /><Input label="Cursando?" field="isStudying" /></div>
+               <div className="md:col-span-2"><TextArea label="Áreas de Interesse" field="interestAreas" /><TextArea label="Experiência Anterior" field="experience" /><TextArea label="Cursos e Certificações" field="courses" /></div>
                <Input label="Link Currículo" field="cvUrl" />
                <Input label="Link Portfólio" field="portfolioUrl" />
+               <div className="md:col-span-2"><TextArea label="Referências" field="references" /></div>
             </div>
           )}
           {activeSection === 'processo' && (
@@ -196,8 +210,32 @@ const CandidateModal = ({ candidate, onClose, onSave, jobs, isSaving }) => {
                  <div><label className="block text-xs text-slate-400 mb-1">Status</label><select className="w-full bg-brand-dark border border-brand-border p-2 rounded text-white font-bold" value={d.status} onChange={e => setD({...d, status: e.target.value})}>{PIPELINE_STAGES.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
                  <Input label="Origem" field="source" />
                  <Input label="Indicação" field="referral" />
+                 <Input label="Tipo Candidatura" field="typeOfApp" />
+                 <Input label="Pretensão Salarial" field="salaryExpectation" />
+                 <Input label="Disponibilidade Mudança" field="canRelocate" />
               </div>
-              <TextArea label="Feedback / Anotações" field="feedback" />
+              <div className="bg-brand-card p-4 rounded-xl border border-brand-border">
+                 <h4 className="text-brand-orange font-bold text-sm mb-4">Histórico de Entrevistas</h4>
+                 <div className="grid grid-cols-2 gap-4">
+                    <Input label="Data 1ª Entrevista" field="firstInterviewDate" />
+                    <Input label="Data 2ª Entrevista" field="secondInterviewDate" />
+                 </div>
+                 <TextArea label="Dados dos Testes" field="testData" />
+                 <TextArea label="Feedback / Anotações" field="feedback" />
+              </div>
+            </div>
+          )}
+          {activeSection === 'outros dados' && (
+            <div className="space-y-4">
+               <div className="bg-brand-card p-4 rounded-lg border border-brand-border mb-4">
+                 <p className="text-sm text-slate-400">Estes dados vieram do Excel mas não têm campos fixos no formulário.</p>
+               </div>
+               {extraFields.length === 0 && <p className="text-slate-500 italic">Nenhum dado extra encontrado.</p>}
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 {extraFields.map(key => (
+                   <Input key={key} label={key} field={key} />
+                 ))}
+               </div>
             </div>
           )}
         </div>
@@ -253,7 +291,7 @@ export default function App() {
     return () => unsubs.forEach(u => u());
   }, [user]);
 
-  // Importação CSV com Verificação de Duplicidade
+  // Importação CSV (Backup Local)
   const handleCSVImport = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -266,33 +304,30 @@ export default function App() {
         
         const headers = rows[0].split(',').map(h => h.trim().replace(/^"|"$/g, '').toLowerCase());
         
-        // **DUPLICIDADE**: Cria um Set com e-mails já existentes para busca rápida
+        // Evita duplicidade local pelo email
         const existingEmails = new Set(candidates.map(c => c.email ? c.email.toLowerCase().trim() : null));
         
         const batchSize = 450;
         let batch = writeBatch(db);
         let count = 0;
         let totalImported = 0;
-        let duplicates = 0;
 
         for (let i = 1; i < rows.length; i++) {
           const values = rows[i].split(',').map(v => v.trim().replace(/^"|"$/g, ''));
           if (values.length < headers.length) continue;
 
           const data = {};
+          // Mapeamento simples para CSV manual (o AppScript é melhor)
           headers.forEach((h, idx) => {
              if (h.includes('nome')) data.fullName = values[idx];
              else if (h.includes('mail')) data.email = values[idx];
              else if (h.includes('cidade')) data.city = values[idx];
              else if (h.includes('fone') || h.includes('celular')) data.phone = values[idx];
-             else data[h] = values[idx]; // Salva outros campos genéricos
+             else if (h.includes('nascimento')) data.birthDate = values[idx];
+             else data[h] = values[idx]; 
           });
 
-          // Pula se já existe
-          if (data.email && existingEmails.has(data.email.toLowerCase())) {
-            duplicates++;
-            continue;
-          }
+          if (data.email && existingEmails.has(data.email.toLowerCase())) continue;
 
           data.status = 'Inscrito';
           data.createdAt = serverTimestamp();
@@ -304,7 +339,7 @@ export default function App() {
           if (count >= batchSize) { await batch.commit(); batch = writeBatch(db); count = 0; }
         }
         if (count > 0) await batch.commit();
-        alert(`Importação: ${totalImported} novos, ${duplicates} duplicados ignorados.`);
+        alert(`Importação Local: ${totalImported} novos candidatos.`);
       } catch (err) { console.error(err); alert("Erro na importação."); } 
       finally { setIsImporting(false); event.target.value = ''; }
     };
@@ -331,7 +366,7 @@ export default function App() {
     if (!candidate || candidate.status === newStage) return;
     const isConclusion = ['Selecionado', 'Contratado', 'Reprovado'].includes(newStage);
     const missing = []; 
-    // Regras simples para demo (pode expandir)
+    // Regras
     if (PIPELINE_STAGES.indexOf(newStage) > 1 && !candidate.city) missing.push('city'); 
     
     if (missing.length > 0 || isConclusion) setPendingTransition({ candidate, toStage: newStage, missingFields: missing, isConclusion });
@@ -385,10 +420,7 @@ export default function App() {
             {activeTab === 'dashboard' && <Dashboard filteredJobs={filteredData.jobs} filteredCandidates={filteredData.candidates} />}
             {activeTab === 'pipeline' && <Pipeline candidates={filteredData.candidates} jobs={jobs} onDragEnd={handleDragEnd} onEdit={setEditingCandidate} />}
             {activeTab === 'jobs' && <JobsList jobs={filteredData.jobs} candidates={candidates} onAdd={() => setIsJobModalOpen(true)} onDelete={(id) => handleDeleteItem('jobs', id)} onFilterPipeline={(id) => { setFilters({...filters, jobId: id}); setActiveTab('pipeline'); }} />}
-            
-            {/* LISTA DE CANDIDATOS COM PAGINAÇÃO */}
             {activeTab === 'candidates' && <CandidatesList candidates={filteredData.candidates} jobs={jobs} onAdd={() => setEditingCandidate({})} onEdit={setEditingCandidate} onDelete={(id) => handleDeleteItem('candidates', id)} />}
-            
             {activeTab === 'settings' && <SettingsPage companies={companies} onAddCompany={n => handleAddAux('companies', n)} onDelCompany={id => handleDeleteItem('companies', id)} cities={cities} onAddCity={n => handleAddAux('cities', n)} onDelCity={id => handleDeleteItem('cities', id)} interestAreas={interestAreas} onAddInterest={n => handleAddAux('interest_areas', n)} onDelInterest={id => handleDeleteItem('interest_areas', id)} roles={roles} onAddRole={n => handleAddAux('roles', n)} onDelRole={id => handleDeleteItem('roles', id)} onImportCSV={handleCSVImport} isImporting={isImporting} />}
           </div>
         </main>
@@ -419,12 +451,10 @@ const Dashboard = ({ filteredJobs, filteredCandidates }) => {
   );
 };
 
-// CORREÇÃO DO MENU PIPELINE
 const Pipeline = ({ candidates, jobs, onDragEnd, onEdit }) => {
   const [draggedId, setDraggedId] = useState(null);
   const handleDragStart = (e, id) => { setDraggedId(id); e.dataTransfer.effectAllowed = "move"; };
   
-  // CORRIGIDO: Era 'constQT', agora é 'const handleDrop'
   const handleDrop = (e, stage) => { 
     e.preventDefault(); 
     if (draggedId) { onDragEnd(draggedId, stage); setDraggedId(null); } 

@@ -5,10 +5,10 @@ import {
   UserPlus, Trophy, Menu, X, LogOut, Lock, Loader2, Edit3, Trash2,
   Building2, Tag, Mail, Save, AlertTriangle, UploadCloud, 
   Calendar, Phone, DollarSign, SortAsc, SortDesc, Eye, CheckSquare, XSquare,
-  GraduationCap, Globe
+  ListFilter, ArrowUp, ArrowDown
 } from 'lucide-react';
 import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer 
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell 
 } from 'recharts';
 
 // Firebase Imports
@@ -21,11 +21,13 @@ import {
   onSnapshot, serverTimestamp, query, orderBy, writeBatch 
 } from "firebase/firestore";
 
-// Imports Locais
 import TransitionModal from './components/modals/TransitionModal';
 import SettingsPage from './components/SettingsPage';
-import { PIPELINE_STAGES, STATUS_COLORS } from './constants';
+import { PIPELINE_STAGES, STATUS_COLORS, JOB_STATUSES } from './constants';
 
+const COLORS = ['#fe5009', '#00bcbc', '#fb923c', '#22d3ee', '#f87171']; 
+
+// CONFIG FIREBASE
 const firebaseConfig = {
   apiKey: "AIzaSyD54i_1mQdEbS3ePMxhCkN2bhezjcq7xEg",
   authDomain: "young-talents-ats.firebaseapp.com",
@@ -39,6 +41,84 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+// --- COMPONENTES DE UI ---
+
+// Sidebar de Filtros Avançados
+const FilterSidebar = ({ isOpen, onClose, filters, setFilters, clearFilters, options }) => {
+  if (!isOpen) return null;
+  return (
+    <>
+      <div className="fixed inset-0 bg-black/50 z-40 backdrop-blur-sm" onClick={onClose} />
+      <div className="fixed inset-y-0 right-0 w-80 bg-brand-card border-l border-brand-border z-50 p-6 shadow-2xl transform transition-transform duration-300 overflow-y-auto">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="font-bold text-white text-lg flex items-center gap-2"><Filter size={20}/> Filtros Avançados</h3>
+          <button onClick={onClose}><X className="text-slate-400 hover:text-white" /></button>
+        </div>
+        
+        <div className="space-y-4">
+          {/* Grupo 1: Vaga */}
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-brand-cyan uppercase">Vaga & Empresa</label>
+            <select className="w-full bg-brand-dark border border-brand-border rounded p-2 text-sm text-white" value={filters.jobId} onChange={e => setFilters({...filters, jobId: e.target.value})}>
+               <option value="all">Todas as Vagas</option>{options.jobs.map(j=><option key={j.id} value={j.id}>{j.title}</option>)}
+            </select>
+            <select className="w-full bg-brand-dark border border-brand-border rounded p-2 text-sm text-white" value={filters.company} onChange={e => setFilters({...filters, company: e.target.value})}>
+               <option value="all">Todas as Empresas</option>{options.companies.map(c=><option key={c.id} value={c.name}>{c.name}</option>)}
+            </select>
+          </div>
+
+          {/* Grupo 2: Demografia */}
+          <div className="space-y-2 pt-4 border-t border-brand-border">
+            <label className="text-xs font-bold text-brand-cyan uppercase">Dados do Candidato</label>
+            <select className="w-full bg-brand-dark border border-brand-border rounded p-2 text-sm text-white" value={filters.city} onChange={e => setFilters({...filters, city: e.target.value})}>
+               <option value="all">Todas as Cidades</option>{options.cities.map(c=><option key={c.id} value={c.name}>{c.name}</option>)}
+            </select>
+            <select className="w-full bg-brand-dark border border-brand-border rounded p-2 text-sm text-white" value={filters.interestArea} onChange={e => setFilters({...filters, interestArea: e.target.value})}>
+               <option value="all">Todas Áreas de Interesse</option>{options.interestAreas.map(i=><option key={i.id} value={i.name}>{i.name}</option>)}
+            </select>
+            <select className="w-full bg-brand-dark border border-brand-border rounded p-2 text-sm text-white" value={filters.schooling} onChange={e => setFilters({...filters, schooling: e.target.value})}>
+               <option value="all">Qualquer Escolaridade</option>{options.schooling.map(s=><option key={s.id} value={s.name}>{s.name}</option>)}
+            </select>
+          </div>
+
+          {/* Grupo 3: Detalhes */}
+          <div className="space-y-2 pt-4 border-t border-brand-border">
+            <label className="text-xs font-bold text-brand-cyan uppercase">Filtros Específicos</label>
+            <div className="grid grid-cols-2 gap-2">
+              <select className="bg-brand-dark border border-brand-border rounded p-2 text-sm text-white" value={filters.cnh} onChange={e => setFilters({...filters, cnh: e.target.value})}>
+                <option value="all">CNH: Todos</option><option value="Sim">Sim</option><option value="Não">Não</option>
+              </select>
+              <select className="bg-brand-dark border border-brand-border rounded p-2 text-sm text-white" value={filters.marital} onChange={e => setFilters({...filters, marital: e.target.value})}>
+                <option value="all">Est. Civil</option>{options.marital.map(m=><option key={m.id} value={m.name}>{m.name}</option>)}
+              </select>
+            </div>
+            <select className="w-full bg-brand-dark border border-brand-border rounded p-2 text-sm text-white" value={filters.origin} onChange={e => setFilters({...filters, origin: e.target.value})}>
+               <option value="all">Origem (Fonte)</option>{options.origins.map(o=><option key={o.id} value={o.name}>{o.name}</option>)}
+            </select>
+          </div>
+        </div>
+
+        <div className="mt-8 pt-4 border-t border-brand-border flex flex-col gap-2">
+          <button onClick={onClose} className="w-full bg-brand-orange text-white py-2 rounded font-bold hover:bg-orange-600">Aplicar Filtros</button>
+          <button onClick={clearFilters} className="w-full text-slate-400 hover:text-white py-2 text-sm">Limpar Tudo</button>
+        </div>
+      </div>
+    </>
+  );
+};
+
+// Login
+const LoginScreen = ({ onLogin, error }) => (
+  <div className="min-h-screen bg-brand-dark flex items-center justify-center p-4">
+    <div className="bg-brand-card rounded-2xl shadow-2xl p-8 max-w-md w-full text-center border border-brand-border">
+      <div className="w-20 h-20 bg-gradient-to-br from-brand-orange to-brand-cyan rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-brand-orange/20"><Trophy size={40} className="text-white" /></div>
+      <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">Young Talents</h1>
+      {error && <div className="bg-red-900/20 text-red-400 p-3 rounded-lg text-sm mb-6 flex items-center justify-center border border-red-900/50"><Lock size={16} className="mr-2"/>{error}</div>}
+      <button onClick={onLogin} className="w-full bg-white text-brand-dark font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-3 hover:bg-slate-100 transition-all"><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="G" className="w-5 h-5" /> Entrar com Google</button>
+    </div>
+  </div>
+);
+
 // --- APP PRINCIPAL ---
 export default function App() {
   const [user, setUser] = useState(null);
@@ -46,15 +126,13 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
-  // --- DADOS DO BANCO ---
+  // Dados do Banco
   const [jobs, setJobs] = useState([]);
   const [candidates, setCandidates] = useState([]);
   const [companies, setCompanies] = useState([]);
   const [cities, setCities] = useState([]);
   const [interestAreas, setInterestAreas] = useState([]);
   const [roles, setRoles] = useState([]);
-  
-  // Novos Dados de Configuração (Validação)
   const [origins, setOrigins] = useState([]);
   const [schooling, setSchooling] = useState([]);
   const [marital, setMarital] = useState([]);
@@ -65,63 +143,40 @@ export default function App() {
   const [editingJob, setEditingJob] = useState(null);
   const [pendingTransition, setPendingTransition] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [isImporting, setIsImporting] = useState(false);
+  const [isFilterSidebarOpen, setIsFilterSidebarOpen] = useState(false);
 
-  // Filtros
-  const [filters, setFilters] = useState({ 
-    period: 'all', company: 'all', jobId: 'all', city: 'all', 
-    interestArea: 'all', search: '', sort: 'date_desc',
-    marital: 'all', cnh: 'all', origin: 'all', schooling: 'all' // Novos Filtros
-  });
+  // Filtros - Estado Inicial
+  const initialFilters = { 
+    search: '', period: 'all', sort: 'date_desc',
+    jobId: 'all', company: 'all', city: 'all', interestArea: 'all',
+    cnh: 'all', marital: 'all', origin: 'all', schooling: 'all'
+  };
+  const [filters, setFilters] = useState(initialFilters);
 
-  // Auth
+  // Auth e Sync
   useEffect(() => { return onAuthStateChanged(auth, (u) => { setUser(u); setAuthLoading(false); }); }, []);
-  const handleGoogleLogin = async () => { try { await signInWithPopup(auth, new GoogleAuthProvider()); } catch (e) { console.error(e); } };
-
-  // Data Sync (Snapshots)
+  
   useEffect(() => {
     if (!user) return;
-    const unsubs = [
-      onSnapshot(query(collection(db, 'jobs'), orderBy('createdAt', 'desc')), s => setJobs(s.docs.map(d => ({id:d.id, ...d.data()})))),
-      onSnapshot(query(collection(db, 'candidates'), orderBy('createdAt', 'desc')), s => setCandidates(s.docs.map(d => ({id:d.id, ...d.data()})))),
-      // Configurações
-      onSnapshot(query(collection(db, 'companies'), orderBy('name')), s => setCompanies(s.docs.map(d => ({id:d.id, ...d.data()})))),
-      onSnapshot(query(collection(db, 'cities'), orderBy('name')), s => setCities(s.docs.map(d => ({id:d.id, ...d.data()})))),
-      onSnapshot(query(collection(db, 'interest_areas'), orderBy('name')), s => setInterestAreas(s.docs.map(d => ({id:d.id, ...d.data()})))),
-      onSnapshot(query(collection(db, 'roles'), orderBy('name')), s => setRoles(s.docs.map(d => ({id:d.id, ...d.data()})))),
-      // Novas Configurações de Validação
-      onSnapshot(query(collection(db, 'origins'), orderBy('name')), s => setOrigins(s.docs.map(d => ({id:d.id, ...d.data()})))),
-      onSnapshot(query(collection(db, 'schooling_levels'), orderBy('name')), s => setSchooling(s.docs.map(d => ({id:d.id, ...d.data()})))),
-      onSnapshot(query(collection(db, 'marital_statuses'), orderBy('name')), s => setMarital(s.docs.map(d => ({id:d.id, ...d.data()})))),
-    ];
+    const cols = ['jobs', 'candidates', 'companies', 'cities', 'interest_areas', 'roles', 'origins', 'schooling_levels', 'marital_statuses'];
+    const setters = [setJobs, setCandidates, setCompanies, setCities, setInterestAreas, setRoles, setOrigins, setSchooling, setMarital];
+    
+    const unsubs = cols.map((col, i) => 
+      onSnapshot(query(collection(db, col), orderBy(col === 'jobs' || col === 'candidates' ? 'createdAt' : 'name', 'desc')), s => setters[i](s.docs.map(d => ({id:d.id, ...d.data()}))))
+    );
     return () => unsubs.forEach(u => u());
   }, [user]);
 
-  // CSV Import (Mantido, apenas simplificado visualmente aqui)
-  const handleCSVImport = async (event) => { /* Mesma lógica do código anterior */ };
-
-  // Lógica de Filtros Atualizada
+  // Logica de Filtro Centralizada
   const filteredData = useMemo(() => {
     let list = [...candidates];
     let fJobs = jobs;
 
-    if (filters.company !== 'all') fJobs = fJobs.filter(j => j.company === filters.company);
-    if (filters.city !== 'all') fJobs = fJobs.filter(j => j.location === filters.city);
-
+    // Filtros Básicos
     if (filters.search) {
       const s = filters.search.toLowerCase();
       list = list.filter(c => c.fullName?.toLowerCase().includes(s) || c.email?.toLowerCase().includes(s));
     }
-    if (filters.jobId !== 'all') list = list.filter(c => c.jobId === filters.jobId);
-    if (filters.city !== 'all') list = list.filter(c => c.city === filters.city);
-    if (filters.interestArea !== 'all') list = list.filter(c => c.interestAreas?.includes(filters.interestArea));
-    if (filters.cnh !== 'all') list = list.filter(c => c.hasLicense === filters.cnh);
-    
-    // Novos Filtros
-    if (filters.marital !== 'all') list = list.filter(c => c.maritalStatus === filters.marital);
-    if (filters.origin !== 'all') list = list.filter(c => c.source === filters.origin);
-    if (filters.schooling !== 'all') list = list.filter(c => c.schoolingLevel === filters.schooling);
-    
     if (filters.period !== 'all') {
       const days = parseInt(filters.period);
       const now = new Date();
@@ -132,6 +187,19 @@ export default function App() {
       });
     }
 
+    // Filtros Avançados
+    if (filters.jobId !== 'all') list = list.filter(c => c.jobId === filters.jobId);
+    if (filters.city !== 'all') list = list.filter(c => c.city === filters.city);
+    if (filters.interestArea !== 'all') list = list.filter(c => c.interestAreas === filters.interestArea); // Strict match for dropdown
+    if (filters.cnh !== 'all') list = list.filter(c => c.hasLicense === filters.cnh);
+    if (filters.marital !== 'all') list = list.filter(c => c.maritalStatus === filters.marital);
+    if (filters.origin !== 'all') list = list.filter(c => c.source === filters.origin);
+    if (filters.schooling !== 'all') list = list.filter(c => c.schoolingLevel === filters.schooling);
+    
+    // Filtros Vagas
+    if (filters.company !== 'all') fJobs = fJobs.filter(j => j.company === filters.company);
+
+    // Ordenação
     list.sort((a, b) => {
       if (filters.sort === 'date_desc') return (new Date(b.createdAt||0) - new Date(a.createdAt||0));
       if (filters.sort === 'date_asc') return (new Date(a.createdAt||0) - new Date(b.createdAt||0));
@@ -142,111 +210,93 @@ export default function App() {
     return { jobs: fJobs, candidates: list };
   }, [jobs, candidates, filters]);
 
-  // Actions
+  // Handlers
   const handleDragEnd = (cId, newStage) => {
     const candidate = candidates.find(c => c.id === cId);
     if (!candidate || candidate.status === newStage) return;
+    // Lógica de conclusão (Contrato/Reprovado) exige validação visual
     const isConclusion = ['Selecionado', 'Contratado', 'Reprovado'].includes(newStage);
-    const missing = []; 
+    const missing = [];
+    
+    // Validações simples (Exemplo)
     if (PIPELINE_STAGES.indexOf(newStage) > 1 && !candidate.city) missing.push('city'); 
+
     if (missing.length > 0 || isConclusion) setPendingTransition({ candidate, toStage: newStage, missingFields: missing, isConclusion });
     else updateDoc(doc(db, 'candidates', cId), { status: newStage });
   };
 
-  const confirmTransition = async (d) => {
-    if (!pendingTransition) return;
-    setIsSaving(true);
-    try { await updateDoc(doc(db, 'candidates', pendingTransition.candidate.id), { ...d, status: pendingTransition.toStage }); setPendingTransition(null); } 
-    catch(e) { alert("Erro"); } finally { setIsSaving(false); }
-  };
-
-  const handleSaveCandidate = async (d) => {
+  const handleSaveGeneric = async (col, d, closeFn) => {
     setIsSaving(true);
     try {
-      if (d.id) await updateDoc(doc(db, 'candidates', d.id), d);
-      else await addDoc(collection(db, 'candidates'), { ...d, createdAt: serverTimestamp() });
-      setEditingCandidate(null);
-    } catch(e) { alert("Erro ao salvar candidato."); } finally { setIsSaving(false); }
+      if (d.id) await updateDoc(doc(db, col, d.id), d);
+      else await addDoc(collection(db, col), { ...d, createdAt: serverTimestamp() });
+      if(closeFn) closeFn();
+    } catch(e) { alert("Erro ao salvar."); } finally { setIsSaving(false); }
   };
-
-  const handleSaveJob = async (d) => {
-    setIsSaving(true);
-    try {
-      if (d.id) await updateDoc(doc(db, 'jobs', d.id), d);
-      else await addDoc(collection(db, 'jobs'), { ...d, status: 'Aberta', createdAt: serverTimestamp(), createdBy: user.email });
-      setIsJobModalOpen(false); setEditingJob(null);
-    } catch (e) { alert("Erro ao salvar vaga."); } finally { setIsSaving(false); }
-  };
-
-  const handleAddAux = async (col, name) => { if(name.trim()) await addDoc(collection(db, col), { name }); };
-  const handleDeleteItem = async (col, id) => { if(confirm('Excluir item?')) await deleteDoc(doc(db, col, id)); };
 
   if (authLoading) return <div className="min-h-screen bg-brand-dark flex items-center justify-center text-brand-cyan"><Loader2 className="animate-spin mr-2"/> Carregando...</div>;
-  if (!user) return <LoginScreen onLogin={handleGoogleLogin} />;
+  if (!user) return <LoginScreen onLogin={async () => { try { await signInWithPopup(auth, new GoogleAuthProvider()); } catch(e){} }} />;
 
-  // Config Handlers
-  const configHandlers = {
-    companies: { items: companies, onAdd: n=>handleAddAux('companies', n), onDel: id=>handleDeleteItem('companies', id) },
-    cities: { items: cities, onAdd: n=>handleAddAux('cities', n), onDel: id=>handleDeleteItem('cities', id) },
-    interestAreas: { items: interestAreas, onAdd: n=>handleAddAux('interest_areas', n), onDel: id=>handleDeleteItem('interest_areas', id) },
-    roles: { items: roles, onAdd: n=>handleAddAux('roles', n), onDel: id=>handleDeleteItem('roles', id) },
-    origins: { items: origins, onAdd: n=>handleAddAux('origins', n), onDel: id=>handleDeleteItem('origins', id) },
-    schooling: { items: schooling, onAdd: n=>handleAddAux('schooling_levels', n), onDel: id=>handleDeleteItem('schooling_levels', id) },
-    marital: { items: marital, onAdd: n=>handleAddAux('marital_statuses', n), onDel: id=>handleDeleteItem('marital_statuses', id) },
-  };
+  // Props de Opções para modais e filtros
+  const optionsProps = { jobs, companies, cities, interestAreas, roles, origins, schooling, marital };
 
   return (
     <div className="flex min-h-screen bg-brand-dark font-sans text-slate-200">
-      {/* Sidebar (Mantida igual) */}
+      {/* Sidebar de Navegação */}
       <div className={`fixed lg:static inset-y-0 left-0 z-30 w-64 bg-brand-card border-r border-brand-border transform transition-transform duration-200 ${isSidebarOpen?'translate-x-0':'-translate-x-full'} lg:translate-x-0 flex flex-col`}>
         <div className="p-6 border-b border-brand-border flex items-center justify-between"><div className="flex items-center gap-2 font-bold text-xl text-white"><Trophy size={18} className="text-brand-orange"/> Young Talents</div><button onClick={()=>setIsSidebarOpen(false)} className="lg:hidden"><X/></button></div>
         <nav className="flex-1 p-4 space-y-1">{[{ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard }, { id: 'pipeline', label: 'Pipeline', icon: Filter }, { id: 'jobs', label: 'Vagas', icon: Briefcase }, { id: 'candidates', label: 'Candidatos', icon: Users }, { id: 'settings', label: 'Configurações', icon: Settings }].map(i => (
-          <button key={i.id} onClick={() => { setActiveTab(i.id); setIsSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${activeTab === i.id ? 'bg-brand-orange text-white' : 'text-slate-400 hover:bg-brand-hover'}`}><i.icon size={18}/> {i.label}</button>
+          <button key={i.id} onClick={() => { setActiveTab(i.id); setIsSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${activeTab === i.id ? 'bg-brand-orange text-white shadow-lg' : 'text-slate-400 hover:bg-brand-hover hover:text-white'}`}><i.icon size={18}/> {i.label}</button>
         ))}</nav>
-        <div className="p-4 border-t border-brand-border bg-brand-dark/30 flex items-center justify-between"><div className="text-xs truncate max-w-[120px]">{user.email}</div><button onClick={()=>signOut(auth)}><LogOut size={16} className="text-red-400"/></button></div>
+        <div className="p-4 border-t border-brand-border bg-brand-dark/30 flex items-center justify-between"><div className="text-xs truncate max-w-[120px]">{user.email}</div><button onClick={()=>signOut(auth)}><LogOut size={16} className="text-red-400 hover:text-red-300"/></button></div>
       </div>
 
       <div className="flex-1 flex flex-col min-h-screen overflow-hidden">
-        <div className="lg:hidden p-4 bg-brand-card flex justify-between border-b border-brand-border"><button onClick={()=>setIsSidebarOpen(true)}><Menu/></button><span>Young Talents</span><div/></div>
-        
-        {/* BARRA DE FILTROS (Revisada) */}
-        <div className="bg-brand-card border-b border-brand-border px-6 py-4 flex flex-wrap gap-4 items-center justify-between shadow-sm z-10">
-           <div className="flex flex-wrap gap-2 w-full lg:w-auto items-center">
-              <div className="relative w-full md:w-56"><Search className="absolute left-3 top-2.5 text-slate-400" size={16}/><input placeholder="Buscar..." className="pl-9 pr-3 py-2 bg-brand-dark border border-brand-border rounded-lg text-sm w-full outline-none focus:border-brand-cyan text-white" value={filters.search} onChange={e => setFilters({...filters, search: e.target.value})}/></div>
+        {/* Top Bar - 3 Blocos Principais de Filtro + Avançado */}
+        <div className="bg-brand-card border-b border-brand-border px-6 py-4 flex flex-col lg:flex-row gap-4 items-center justify-between shadow-sm z-10">
+           <div className="flex flex-wrap gap-3 w-full lg:w-auto items-center">
+              {/* Bloco 1: Busca */}
+              <div className="relative w-full lg:w-64"><Search className="absolute left-3 top-2.5 text-slate-400" size={16}/><input placeholder="Buscar..." className="pl-9 pr-3 py-2 bg-brand-dark border border-brand-border rounded-lg text-sm w-full outline-none focus:border-brand-cyan text-white placeholder-slate-500" value={filters.search} onChange={e => setFilters({...filters, search: e.target.value})}/></div>
               
-              <select className="bg-brand-dark border border-brand-border rounded-lg text-sm px-2 py-2 outline-none text-white max-w-[120px]" value={filters.jobId} onChange={e => setFilters({...filters, jobId: e.target.value})}><option value="all">Vagas</option>{jobs.map(j=><option key={j.id} value={j.id}>{j.title}</option>)}</select>
-              <select className="bg-brand-dark border border-brand-border rounded-lg text-sm px-2 py-2 outline-none text-white max-w-[120px]" value={filters.city} onChange={e => setFilters({...filters, city: e.target.value})}><option value="all">Cidades</option>{cities.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}</select>
+              {/* Bloco 2: Período */}
+              <select className="bg-brand-dark border border-brand-border rounded-lg text-sm px-3 py-2 outline-none text-white focus:border-brand-cyan cursor-pointer" value={filters.period} onChange={e => setFilters({...filters, period: e.target.value})}>
+                 <option value="all">Todo o Período</option><option value="7">Últimos 7 dias</option><option value="30">Últimos 30 dias</option><option value="90">Últimos 3 meses</option>
+              </select>
               
-              {/* Filtros Dinâmicos */}
-              <select className="bg-brand-dark border border-brand-border rounded-lg text-sm px-2 py-2 outline-none text-white max-w-[120px]" value={filters.origin} onChange={e => setFilters({...filters, origin: e.target.value})}><option value="all">Origem</option>{origins.map(o=><option key={o.id} value={o.name}>{o.name}</option>)}</select>
-              
-              <select className="bg-brand-dark border border-brand-border rounded-lg text-sm px-2 py-2 outline-none text-white max-w-[120px]" value={filters.cnh} onChange={e => setFilters({...filters, cnh: e.target.value})}><option value="all">CNH</option><option value="Sim">Sim</option><option value="Não">Não</option></select>
-              
-              <select className="bg-brand-dark border border-brand-border rounded-lg text-sm px-2 py-2 outline-none text-white max-w-[120px]" value={filters.sort} onChange={e => setFilters({...filters, sort: e.target.value})}>
-                 <option value="date_desc">Data ↓</option><option value="date_asc">Data ↑</option><option value="alpha_asc">A-Z</option>
+              {/* Bloco 3: Classificação */}
+              <select className="bg-brand-dark border border-brand-border rounded-lg text-sm px-3 py-2 outline-none text-white focus:border-brand-cyan cursor-pointer" value={filters.sort} onChange={e => setFilters({...filters, sort: e.target.value})}>
+                 <option value="date_desc">Mais Recentes</option><option value="date_asc">Mais Antigos</option><option value="alpha_asc">A-Z</option>
               </select>
            </div>
-           <div className="text-xs font-bold text-brand-cyan border border-brand-cyan/20 px-3 py-1 rounded-full bg-brand-cyan/10 whitespace-nowrap">{filteredData.candidates.length} Talentos • {filteredData.jobs.length} Vagas</div>
+           
+           {/* Bloco 4: Filtros Avançados e Info */}
+           <div className="flex items-center gap-3">
+              <button onClick={() => setIsFilterSidebarOpen(true)} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isFilterSidebarOpen ? 'bg-brand-orange text-white' : 'bg-brand-dark text-brand-cyan border border-brand-cyan/30 hover:bg-brand-cyan/10'}`}>
+                <ListFilter size={16}/> Filtros Avançados
+              </button>
+              <div className="hidden xl:block text-xs text-slate-400 border-l border-slate-700 pl-4">
+                <span className="block font-bold text-white">{filteredData.candidates.length}</span> Talentos
+              </div>
+           </div>
         </div>
 
+        {/* Conteúdo */}
         <main className="flex-1 p-4 md:p-8 overflow-y-auto bg-brand-dark custom-scrollbar">
           <div className="max-w-[1600px] mx-auto h-full">
             {activeTab === 'dashboard' && <Dashboard filteredJobs={filteredData.jobs} filteredCandidates={filteredData.candidates} />}
             {activeTab === 'pipeline' && <Pipeline candidates={filteredData.candidates} jobs={jobs} onDragEnd={handleDragEnd} onEdit={setEditingCandidate} />}
-            {activeTab === 'jobs' && <JobsList jobs={filteredData.jobs} candidates={candidates} onAdd={() => { setEditingJob({}); setIsJobModalOpen(true); }} onEdit={(j) => { setEditingJob(j); setIsJobModalOpen(true); }} onDelete={(id) => handleDeleteItem('jobs', id)} onToggleStatus={handleSaveJob} onFilterPipeline={(id) => { setFilters({...filters, jobId: id}); setActiveTab('pipeline'); }} />}
-            {activeTab === 'candidates' && <CandidatesList candidates={filteredData.candidates} jobs={jobs} onAdd={() => setEditingCandidate({})} onEdit={setEditingCandidate} onDelete={(id) => handleDeleteItem('candidates', id)} />}
-            
-            {/* SETTINGS PAGE ATUALIZADA */}
+            {activeTab === 'jobs' && <JobsList jobs={filteredData.jobs} candidates={candidates} onAdd={() => { setEditingJob({}); setIsJobModalOpen(true); }} onEdit={(j) => { setEditingJob(j); setIsJobModalOpen(true); }} onDelete={(id) => deleteDoc(doc(db, 'jobs', id))} onToggleStatus={handleSaveGeneric} onFilterPipeline={(id) => { setFilters({...filters, jobId: id}); setActiveTab('pipeline'); }} />}
+            {activeTab === 'candidates' && <CandidatesList candidates={filteredData.candidates} jobs={jobs} onAdd={() => setEditingCandidate({})} onEdit={setEditingCandidate} onDelete={(id) => deleteDoc(doc(db, 'candidates', id))} />}
             {activeTab === 'settings' && (
                <SettingsPage 
-                 {...configHandlers.companies} 
-                 onAddCompany={configHandlers.companies.onAdd} onDelCompany={configHandlers.companies.onDel}
-                 cities={cities} onAddCity={configHandlers.cities.onAdd} onDelCity={configHandlers.cities.onDel}
-                 interestAreas={interestAreas} onAddInterest={configHandlers.interestAreas.onAdd} onDelInterest={configHandlers.interestAreas.onDel}
-                 roles={roles} onAddRole={configHandlers.roles.onAdd} onDelRole={configHandlers.roles.onDel}
-                 origins={origins} onAddOrigin={configHandlers.origins.onAdd} onDelOrigin={configHandlers.origins.onDel}
-                 schooling={schooling} onAddSchooling={configHandlers.schooling.onAdd} onDelSchooling={configHandlers.schooling.onDel}
-                 marital={marital} onAddMarital={configHandlers.marital.onAdd} onDelMarital={configHandlers.marital.onDel}
+                 {...optionsProps}
+                 onAddCompany={n=>addDoc(collection(db,'companies'),{name:n})} onDelCompany={id=>deleteDoc(doc(db,'companies',id))}
+                 onAddCity={n=>addDoc(collection(db,'cities'),{name:n})} onDelCity={id=>deleteDoc(doc(db,'cities',id))}
+                 onAddInterest={n=>addDoc(collection(db,'interest_areas'),{name:n})} onDelInterest={id=>deleteDoc(doc(db,'interest_areas',id))}
+                 onAddRole={n=>addDoc(collection(db,'roles'),{name:n})} onDelRole={id=>deleteDoc(doc(db,'roles',id))}
+                 onAddOrigin={n=>addDoc(collection(db,'origins'),{name:n})} onDelOrigin={id=>deleteDoc(doc(db,'origins',id))}
+                 onAddSchooling={n=>addDoc(collection(db,'schooling_levels'),{name:n})} onDelSchooling={id=>deleteDoc(doc(db,'schooling_levels',id))}
+                 onAddMarital={n=>addDoc(collection(db,'marital_statuses'),{name:n})} onDelMarital={id=>deleteDoc(doc(db,'marital_statuses',id))}
                  onImportCSV={()=>{}} isImporting={false} 
                />
             )}
@@ -254,36 +304,36 @@ export default function App() {
         </main>
       </div>
 
-      {isJobModalOpen && <JobModal isOpen={isJobModalOpen} job={editingJob} onClose={() => { setIsJobModalOpen(false); setEditingJob(null); }} onSave={handleSaveJob} companies={companies} cities={cities} isSaving={isSaving} />}
+      {/* Modais e Sidebars */}
+      <FilterSidebar isOpen={isFilterSidebarOpen} onClose={() => setIsFilterSidebarOpen(false)} filters={filters} setFilters={setFilters} clearFilters={() => setFilters(initialFilters)} options={optionsProps} />
       
-      {/* CANDIDATE MODAL ATUALIZADO COM DROPDOWNS */}
-      {editingCandidate && (
-         <CandidateModal 
-            candidate={editingCandidate} onClose={() => setEditingCandidate(null)} onSave={handleSaveCandidate} 
-            jobs={jobs} cities={cities} roles={roles} interestAreas={interestAreas} 
-            origins={origins} schooling={schooling} marital={marital}
-            isSaving={isSaving} 
-         />
-      )}
+      {isJobModalOpen && <JobModal isOpen={isJobModalOpen} job={editingJob} onClose={() => { setIsJobModalOpen(false); setEditingJob(null); }} onSave={d => handleSaveGeneric('jobs', d, () => {setIsJobModalOpen(false); setEditingJob(null);})} options={optionsProps} isSaving={isSaving} />}
       
-      {pendingTransition && <TransitionModal transition={pendingTransition} onClose={() => setPendingTransition(null)} onConfirm={confirmTransition} cities={cities} />}
+      {editingCandidate && <CandidateModal candidate={editingCandidate} onClose={() => setEditingCandidate(null)} onSave={d => handleSaveGeneric('candidates', d, () => setEditingCandidate(null))} options={optionsProps} isSaving={isSaving} />}
+      
+      {pendingTransition && <TransitionModal transition={pendingTransition} onClose={() => setPendingTransition(null)} onConfirm={d => handleSaveGeneric('candidates', {id: pendingTransition.candidate.id, ...d, status: pendingTransition.toStage}, () => setPendingTransition(null))} cities={cities} />}
     </div>
   );
 }
 
-// --- SUB-COMPONENTS (Mantidos) ---
+// --- COMPONENTES DE VISUALIZAÇÃO ---
 
 const Dashboard = ({ filteredJobs, filteredCandidates }) => {
-  const data = PIPELINE_STAGES.filter(s=>s!=='Reprovado').map(s => ({ name: s, count: filteredCandidates.filter(c => c.status === s).length }));
+  // Dashboard agora conta o status REAL do candidato
+  const data = PIPELINE_STAGES.map(s => ({ name: s, count: filteredCandidates.filter(c => c.status === s).length }));
+  const activeJobsCount = filteredJobs.filter(j => j.status === 'Aberta').length;
+  
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-brand-card p-6 rounded-xl border border-brand-border"><p className="text-slate-400 text-sm">Total Talentos</p><p className="text-2xl font-bold text-brand-cyan">{filteredCandidates.length}</p></div>
-        <div className="bg-brand-card p-6 rounded-xl border border-brand-border"><p className="text-slate-400 text-sm">Vagas Abertas</p><p className="text-2xl font-bold text-brand-orange">{filteredJobs.filter(j=>j.status==='Aberta').length}</p></div>
-        <div className="bg-brand-card p-6 rounded-xl border border-brand-border"><p className="text-slate-400 text-sm">Contratados</p><p className="text-2xl font-bold text-green-400">{filteredCandidates.filter(c=>c.status==='Contratado').length}</p></div>
+        <div className="bg-brand-card p-6 rounded-xl border border-brand-border shadow-lg"><p className="text-slate-400 text-sm">Total de Talentos</p><p className="text-3xl font-bold text-brand-cyan">{filteredCandidates.length}</p></div>
+        <div className="bg-brand-card p-6 rounded-xl border border-brand-border shadow-lg"><p className="text-slate-400 text-sm">Vagas Ativas</p><p className="text-3xl font-bold text-brand-orange">{activeJobsCount}</p></div>
+        <div className="bg-brand-card p-6 rounded-xl border border-brand-border shadow-lg"><p className="text-slate-400 text-sm">Contratações</p><p className="text-3xl font-bold text-green-400">{filteredCandidates.filter(c=>c.status==='Contratado').length}</p></div>
+        <div className="bg-brand-card p-6 rounded-xl border border-brand-border shadow-lg"><p className="text-slate-400 text-sm">Em Processo</p><p className="text-3xl font-bold text-purple-400">{filteredCandidates.filter(c=>c.status!=='Inscrito' && c.status!=='Contratado' && c.status!=='Reprovado').length}</p></div>
       </div>
-      <div className="bg-brand-card p-6 rounded-xl border border-brand-border h-80">
-        <ResponsiveContainer width="100%" height="100%"><BarChart data={data}><CartesianGrid strokeDasharray="3 3" stroke="#334155"/><XAxis dataKey="name" stroke="#94a3b8" fontSize={10}/><YAxis stroke="#94a3b8"/><Tooltip contentStyle={{backgroundColor:'#1e293b', borderColor:'#475569' }}/><Bar dataKey="count" fill="#fe5009" radius={[4,4,0,0]}/></BarChart></ResponsiveContainer>
+      <div className="bg-brand-card p-6 rounded-xl border border-brand-border shadow-lg h-96">
+        <h3 className="text-white font-bold mb-4">Funil de Seleção Atual</h3>
+        <ResponsiveContainer width="100%" height="100%"><BarChart data={data}><CartesianGrid strokeDasharray="3 3" stroke="#334155"/><XAxis dataKey="name" stroke="#94a3b8" fontSize={10} interval={0} angle={-15} textAnchor="end" height={60}/><YAxis stroke="#94a3b8"/><Tooltip contentStyle={{backgroundColor:'#1e293b', borderColor:'#475569', color:'#fff' }}/><Bar dataKey="count" fill="#fe5009" radius={[4,4,0,0]}/></BarChart></ResponsiveContainer>
       </div>
     </div>
   );
@@ -298,17 +348,22 @@ const Pipeline = ({ candidates, jobs, onDragEnd, onEdit }) => {
       <div className="flex-1 overflow-x-auto pb-4 custom-scrollbar">
         <div className="flex gap-4 min-w-max h-full">
           {PIPELINE_STAGES.map(stage => {
-            const stageCandidates = candidates.filter(c => (c.status || 'Inscrito') === stage);
+            const stageCandidates = candidates.filter(c => c.status === stage);
+            // Visual diferente para etapas finais
+            const isFinal = stage === 'Contratado' || stage === 'Reprovado';
+            const headerColor = stage === 'Contratado' ? 'bg-green-900/40 border-green-600 text-green-100' : stage === 'Reprovado' ? 'bg-red-900/40 border-red-600 text-red-100' : 'bg-brand-card/80 border-brand-border text-slate-200';
+
             return (
-              <div key={stage} className="flex-1 flex flex-col bg-brand-card/50 rounded-xl p-2 min-w-[280px] w-[280px] border border-brand-border" onDragOver={(e) => e.preventDefault()} onDrop={(e) => handleDrop(e, stage)}>
-                <div className={`font-bold text-slate-200 mb-3 px-2 flex justify-between items-center bg-brand-hover p-2 rounded border-l-4 ${STATUS_COLORS[stage]?.split(' ')[2]||'border-gray-500'}`}>
-                  <span className="truncate">{stage}</span><span className="bg-brand-dark px-2 py-0.5 rounded text-xs">{stageCandidates.length}</span>
+              <div key={stage} className={`flex-1 flex flex-col rounded-xl p-2 min-w-[280px] w-[280px] border ${isFinal ? 'bg-transparent border-dashed border-slate-600' : 'bg-brand-card/30 border-brand-border'}`} onDragOver={(e) => e.preventDefault()} onDrop={(e) => handleDrop(e, stage)}>
+                <div className={`font-bold mb-3 px-3 py-2 flex justify-between items-center rounded-lg border ${headerColor}`}>
+                  <span className="truncate text-sm">{stage}</span><span className="bg-black/30 px-2 py-0.5 rounded text-xs">{stageCandidates.length}</span>
                 </div>
                 <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
                   {stageCandidates.map(c => (
-                    <div key={c.id} draggable onDragStart={(e) => handleDragStart(e, c.id)} onClick={() => onEdit(c)} className="bg-brand-card p-3 rounded-lg border border-brand-border hover:border-brand-cyan cursor-grab active:cursor-grabbing group">
-                      <div className="flex justify-between items-start mb-1"><p className="font-bold text-sm truncate">{c.fullName}</p><Edit3 size={14} className="opacity-0 group-hover:opacity-100 text-slate-500"/></div>
-                      <p className="text-xs text-brand-cyan mb-2">{jobs.find(j => j.id === c.jobId)?.title || 'Banco Geral'}</p>
+                    <div key={c.id} draggable onDragStart={(e) => handleDragStart(e, c.id)} onClick={() => onEdit(c)} className="bg-brand-card p-3 rounded-lg border border-brand-border hover:border-brand-cyan cursor-grab active:cursor-grabbing group shadow-sm relative overflow-hidden">
+                      {stage === 'Contratado' && <div className="absolute top-0 right-0 p-1"><CheckCircle size={14} className="text-green-500"/></div>}
+                      <div className="flex justify-between items-start mb-1"><p className="font-bold text-sm truncate text-white">{c.fullName}</p><Edit3 size={14} className="opacity-0 group-hover:opacity-100 text-slate-500"/></div>
+                      <p className="text-xs text-brand-cyan mb-2 truncate">{jobs.find(j => j.id === c.jobId)?.title || 'Banco Geral'}</p>
                       <div className="text-xs text-slate-400 flex gap-1 items-center"><MapPin size={10}/> {c.city || '-'}</div>
                     </div>
                   ))}
@@ -327,18 +382,24 @@ const JobsList = ({ jobs, candidates, onAdd, onEdit, onDelete, onToggleStatus, o
     <div className="flex justify-between"><h2 className="text-2xl font-bold text-white">Vagas</h2><button onClick={onAdd} className="bg-brand-orange text-white px-4 py-2 rounded flex items-center gap-2"><Plus size={18}/> Nova</button></div>
     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
       {jobs.map(j => (
-        <div key={j.id} className="bg-brand-card p-6 rounded-xl border border-brand-border shadow-lg group relative">
+        <div key={j.id} className="bg-brand-card p-6 rounded-xl border border-brand-border shadow-lg group relative hover:border-brand-cyan/50 transition-colors">
           <div className="flex justify-between mb-4">
-             <span className={`text-xs px-2 py-1 rounded border ${j.status === 'Aberta' ? 'bg-brand-cyan/20 text-brand-cyan border-brand-cyan/30' : 'bg-red-900/20 text-red-400 border-red-900/30'}`}>{j.status}</span>
+             <select 
+                className={`text-xs px-2 py-1 rounded border bg-transparent outline-none cursor-pointer ${j.status === 'Aberta' ? 'text-brand-cyan border-brand-cyan/30' : j.status === 'Fechada' ? 'text-red-400 border-red-400/30' : 'text-yellow-400 border-yellow-400/30'}`}
+                value={j.status}
+                onChange={(e) => onToggleStatus('jobs', {id: j.id, status: e.target.value})}
+                onClick={(e) => e.stopPropagation()}
+             >
+                {JOB_STATUSES.map(s => <option key={s} value={s} className="bg-brand-card text-white">{s}</option>)}
+             </select>
              <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button onClick={() => onEdit(j)} className="text-slate-400 hover:text-white"><Edit3 size={16}/></button>
-                <button onClick={() => onToggleStatus({...j, status: j.status === 'Aberta' ? 'Fechada' : 'Aberta'})} className="text-slate-400 hover:text-white" title="Alternar Status">{j.status === 'Aberta' ? <XSquare size={16}/> : <CheckSquare size={16}/>}</button>
              </div>
           </div>
           <h3 className="font-bold text-lg text-white mb-1">{j.title}</h3>
           <p className="text-sm text-slate-400 mb-4">{j.company}</p>
           <div className="border-t border-brand-border pt-4 flex justify-between items-center">
-            <button onClick={() => onFilterPipeline(j.id)} className="text-brand-orange text-sm hover:underline">Ver Pipeline</button>
+            <button onClick={() => onFilterPipeline(j.id)} className="text-brand-orange text-sm hover:underline flex items-center gap-1">Ver Pipeline <ChevronRight size={14}/></button>
             <p className="text-xs text-slate-500">{candidates.filter(c => c.jobId === j.id).length} candidatos</p>
           </div>
         </div>
@@ -365,9 +426,9 @@ const CandidatesList = ({ candidates, jobs, onAdd, onEdit, onDelete }) => {
             <tbody className="divide-y divide-brand-border">
               {currentData.map(c => (
                 <tr key={c.id} className="hover:bg-brand-hover/50 cursor-pointer transition-colors" onClick={() => onEdit(c)}>
-                  <td className="px-6 py-4"><div className="font-bold text-white text-base">{c.fullName}</div><div className="text-xs text-slate-500 flex gap-2 items-center"><Mail size={10}/> {c.email}</div><div className="text-xs text-slate-500 flex gap-2 items-center"><Phone size={10}/> {c.phone}</div></td>
-                  <td className="px-6 py-4"><div className="text-xs text-slate-400 mb-1 flex items-center gap-1"><MapPin size={10}/> {c.city || '-'}</div><div className="text-xs text-slate-400 mb-1">Idade: {c.age || '-'}</div>{c.salaryExpectation && <div className="text-xs text-green-400 flex items-center gap-1"><DollarSign size={10}/> {c.salaryExpectation}</div>}</td>
-                  <td className="px-6 py-4"><div className="text-white mb-1">{jobs.find(j => j.id === c.jobId)?.title || <span className="italic text-slate-600">Banco Geral</span>}</div><div className="text-xs text-slate-500">Fonte: {c.source || '-'}</div></td>
+                  <td className="px-6 py-4"><div className="font-bold text-white text-base">{c.fullName}</div><div className="text-xs text-slate-500 flex gap-2 items-center mt-1"><Mail size={10}/> {c.email}</div><div className="text-xs text-slate-500 flex gap-2 items-center mt-0.5"><Phone size={10}/> {c.phone}</div></td>
+                  <td className="px-6 py-4"><div className="text-xs text-slate-400 mb-1 flex items-center gap-1"><MapPin size={10}/> {c.city || '-'}</div><div className="text-xs text-slate-400 mb-1">Idade: {c.age || '-'}</div>{c.salaryExpectation && <div className="text-xs text-green-400 flex items-center gap-1 font-bold"><DollarSign size={10}/> {c.salaryExpectation}</div>}</td>
+                  <td className="px-6 py-4"><div className="text-white mb-1 bg-brand-dark px-2 py-1 rounded w-fit">{jobs.find(j => j.id === c.jobId)?.title || <span className="italic text-slate-500">Banco Geral</span>}</div><div className="text-xs text-slate-500 mt-1">Origem: {c.source || '-'}</div></td>
                   <td className="px-6 py-4"><span className={`px-2 py-1 rounded text-xs border ${STATUS_COLORS[c.status] || 'bg-slate-700'}`}>{c.status}</span></td>
                   <td className="px-6 py-4 text-right"><button onClick={(e) => { e.stopPropagation(); onEdit(c); }} className="text-slate-400 hover:text-brand-cyan p-2"><Eye size={16}/></button><button onClick={(e) => { e.stopPropagation(); onDelete(c.id); }} className="text-slate-400 hover:text-red-500 p-2"><Trash2 size={16}/></button></td>
                 </tr>
@@ -387,19 +448,20 @@ const CandidatesList = ({ candidates, jobs, onAdd, onEdit, onDelete }) => {
   );
 };
 
-// Candidate Modal com Dropdowns de Validação
-const CandidateModal = ({ candidate, onClose, onSave, jobs, cities, roles, interestAreas, origins, schooling, marital, isSaving }) => {
+// 4. Modal de Candidato (100% Dropdowns)
+const CandidateModal = ({ candidate, onClose, onSave, options, isSaving }) => {
   const [d, setD] = useState({ ...candidate });
   const [activeSection, setActiveSection] = useState('pessoal');
+  const { jobs, cities, roles, interestAreas, origins, schooling, marital } = options;
 
   const standardFields = ['id', 'fullName', 'photoUrl', 'birthDate', 'age', 'email', 'phone', 'city', 'maritalStatus', 'hasLicense', 'childrenCount', 'freeField', 'education', 'schoolingLevel', 'institution', 'interestAreas', 'experience', 'cvUrl', 'portfolioUrl', 'jobId', 'status', 'source', 'referral', 'feedback', 'createdAt', 'imported', 'typeOfApp', 'salaryExpectation', 'canRelocate', 'courses', 'graduationDate', 'isStudying', 'references', 'firstInterviewDate', 'secondInterviewDate', 'testData', 'sheetId', 'original_timestamp'];
   const extraFields = Object.keys(d).filter(key => !standardFields.includes(key));
 
-  const Input = ({ label, field, type="text" }) => (
-    <div className="mb-3"><label className="block text-xs font-bold text-brand-cyan uppercase mb-1.5">{label}</label><input type={type} className="w-full bg-brand-dark border border-brand-border p-2.5 rounded-lg text-sm text-white focus:border-brand-orange outline-none" value={d[field]||''} onChange={e => setD({...d, [field]: e.target.value})} /></div>
+  const Input = ({ label, field, type="text", placeholder="" }) => (
+    <div className="mb-3"><label className="block text-xs font-bold text-brand-cyan uppercase mb-1.5">{label}</label><input type={type} className="w-full bg-brand-dark border border-brand-border p-2.5 rounded-lg text-sm text-white focus:border-brand-orange outline-none" placeholder={placeholder} value={d[field]||''} onChange={e => setD({...d, [field]: e.target.value})} /></div>
   );
-  const Select = ({ label, field, options }) => (
-    <div className="mb-3"><label className="block text-xs font-bold text-brand-cyan uppercase mb-1.5">{label}</label><select className="w-full bg-brand-dark border border-brand-border p-2.5 rounded-lg text-sm text-white focus:border-brand-orange outline-none" value={d[field]||''} onChange={e => setD({...d, [field]: e.target.value})}><option value="">Selecione...</option>{options.map(o=><option key={o.id} value={o.name}>{o.name}</option>)}</select></div>
+  const Select = ({ label, field, list }) => (
+    <div className="mb-3"><label className="block text-xs font-bold text-brand-cyan uppercase mb-1.5">{label}</label><select className="w-full bg-brand-dark border border-brand-border p-2.5 rounded-lg text-sm text-white focus:border-brand-orange outline-none" value={d[field]||''} onChange={e => setD({...d, [field]: e.target.value})}><option value="">Selecione...</option>{list.map(o=><option key={o.id} value={o.name}>{o.name}</option>)}</select></div>
   );
   const TextArea = ({ label, field }) => (
     <div className="mb-3"><label className="block text-xs font-bold text-brand-cyan uppercase mb-1.5">{label}</label><textarea className="w-full bg-brand-dark border border-brand-border p-2.5 rounded-lg text-sm text-white h-24 focus:border-brand-orange outline-none" value={d[field]||''} onChange={e => setD({...d, [field]: e.target.value})} /></div>
@@ -409,7 +471,7 @@ const CandidateModal = ({ candidate, onClose, onSave, jobs, cities, roles, inter
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
       <div className="bg-brand-card rounded-xl shadow-2xl w-full max-w-4xl h-[90vh] flex flex-col border border-brand-border text-white">
         <div className="px-6 py-4 border-b border-brand-border flex justify-between items-center bg-brand-dark/50">
-          <div><h3 className="font-bold text-xl">{d.id ? 'Ficha do Candidato' : 'Novo Talento'}</h3><p className="text-xs text-brand-orange">ID: {d.id || 'Novo'}</p></div>
+          <div><h3 className="font-bold text-xl">{d.id ? 'Editar Candidato' : 'Novo Talento'}</h3><p className="text-xs text-brand-orange">ID: {d.id || 'Gerando...'}</p></div>
           <button onClick={onClose}><X size={24} className="text-slate-400 hover:text-white"/></button>
         </div>
         <div className="flex border-b border-brand-border overflow-x-auto">
@@ -425,9 +487,9 @@ const CandidateModal = ({ candidate, onClose, onSave, jobs, cities, roles, inter
               <div className="grid grid-cols-2 gap-4"><Input label="Nascimento" field="birthDate" /><Input label="Idade" field="age" type="number" /></div>
               <Input label="E-mail" field="email" type="email" />
               <Input label="Celular / WhatsApp" field="phone" />
-              <Select label="Cidade" field="city" options={cities} />
+              <Select label="Cidade" field="city" list={cities} />
               <div className="grid grid-cols-2 gap-4">
-                 <Select label="Estado Civil" field="maritalStatus" options={marital} />
+                 <Select label="Estado Civil" field="maritalStatus" list={marital} />
                  <div className="mb-3"><label className="block text-xs font-bold text-brand-cyan uppercase mb-1.5">Filhos (Quantos?)</label><input type="number" className="w-full bg-brand-dark border border-brand-border p-2.5 rounded-lg text-sm text-white" value={d.childrenCount||''} onChange={e => setD({...d, childrenCount: e.target.value})} /></div>
               </div>
               <div className="mb-3"><label className="block text-xs font-bold text-brand-cyan uppercase mb-1.5">Possui CNH?</label><select className="w-full bg-brand-dark border border-brand-border p-2.5 rounded-lg text-sm text-white" value={d.hasLicense||''} onChange={e => setD({...d, hasLicense: e.target.value})}><option value="">Selecione</option><option value="Sim">Sim</option><option value="Não">Não</option></select></div>
@@ -436,10 +498,10 @@ const CandidateModal = ({ candidate, onClose, onSave, jobs, cities, roles, inter
           {activeSection === 'profissional' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                <div className="md:col-span-2"><TextArea label="Resumo / Bio" field="freeField" /></div>
-               <Input label="Formação" field="education" />
-               <Select label="Nível Escolaridade" field="schoolingLevel" options={schooling} />
-               <Input label="Instituição" field="institution" />
-               <div className="grid grid-cols-2 gap-4"><Input label="Formatura" field="graduationDate" /><Input label="Cursando?" field="isStudying" /></div>
+               <Input label="Formação Acadêmica (Curso)" field="education" />
+               <Select label="Nível Escolaridade" field="schoolingLevel" list={schooling} />
+               <Input label="Instituição de Ensino" field="institution" />
+               <div className="grid grid-cols-2 gap-4"><Input label="Data Formatura" field="graduationDate" /><Input label="Cursando?" field="isStudying" /></div>
                <div className="md:col-span-2 mb-3"><label className="block text-xs font-bold text-brand-cyan uppercase mb-1.5">Área de Interesse Principal</label><select className="w-full bg-brand-dark border border-brand-border p-2.5 rounded-lg text-sm text-white" value={d.interestAreas||''} onChange={e => setD({...d, interestAreas: e.target.value})}><option value="">Selecione...</option>{interestAreas.map(i => <option key={i.id} value={i.name}>{i.name}</option>)}</select></div>
                <div className="md:col-span-2"><TextArea label="Experiência Anterior" field="experience" /><TextArea label="Cursos e Certificações" field="courses" /></div>
                <Input label="Link Currículo" field="cvUrl" />
@@ -449,27 +511,27 @@ const CandidateModal = ({ candidate, onClose, onSave, jobs, cities, roles, inter
           {activeSection === 'processo' && (
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 <div><label className="block text-xs text-slate-400 mb-1">Vaga</label><select className="w-full bg-brand-dark border border-brand-border p-2 rounded text-white" value={d.jobId||''} onChange={e => setD({...d, jobId: e.target.value})}><option value="">Banco Geral</option>{jobs.map(j => <option key={j.id} value={j.id}>{j.title}</option>)}</select></div>
-                 <div><label className="block text-xs text-slate-400 mb-1">Status</label><select className="w-full bg-brand-dark border border-brand-border p-2 rounded text-white font-bold" value={d.status} onChange={e => setD({...d, status: e.target.value})}>{PIPELINE_STAGES.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
-                 <Select label="Origem (Fonte)" field="source" options={origins} />
+                 <div className="mb-3"><label className="block text-xs font-bold text-brand-cyan uppercase mb-1.5">Vaga Vinculada</label><select className="w-full bg-brand-dark border border-brand-border p-2.5 rounded-lg text-sm text-white" value={d.jobId||''} onChange={e => setD({...d, jobId: e.target.value})}><option value="">Banco de Talentos</option>{jobs.map(j => <option key={j.id} value={j.id}>{j.title}</option>)}</select></div>
+                 <div className="mb-3"><label className="block text-xs font-bold text-brand-cyan uppercase mb-1.5">Status</label><select className="w-full bg-brand-dark border border-brand-border p-2.5 rounded-lg text-sm text-white font-bold" value={d.status} onChange={e => setD({...d, status: e.target.value})}>{PIPELINE_STAGES.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
+                 <Select label="Origem (Fonte)" field="source" list={origins} />
                  <Input label="Indicação" field="referral" />
                  <Input label="Pretensão Salarial" field="salaryExpectation" />
                  <Input label="Disponibilidade Mudança" field="canRelocate" />
               </div>
               <div className="bg-brand-card p-4 rounded-xl border border-brand-border">
-                 <h4 className="text-brand-orange font-bold text-sm mb-4">Histórico</h4>
+                 <h4 className="text-brand-orange font-bold text-sm mb-4">Histórico de Entrevistas</h4>
                  <div className="grid grid-cols-2 gap-4">
                     <Input label="Data 1ª Entrevista" field="firstInterviewDate" type="datetime-local" />
                     <Input label="Data 2ª Entrevista" field="secondInterviewDate" type="datetime-local" />
                  </div>
                  <TextArea label="Dados dos Testes" field="testData" />
-                 <TextArea label="Feedback" field="feedback" />
+                 <TextArea label="Feedback / Anotações" field="feedback" />
               </div>
             </div>
           )}
           {activeSection === 'outros dados' && (
             <div className="space-y-4">
-               {extraFields.length === 0 && <p className="text-slate-500 italic">Nenhum dado extra.</p>}
+               {extraFields.length === 0 && <p className="text-slate-500 italic">Nenhum dado extra encontrado.</p>}
                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">{extraFields.map(key => <Input key={key} label={key} field={key} />)}</div>
             </div>
           )}
@@ -483,16 +545,27 @@ const CandidateModal = ({ candidate, onClose, onSave, jobs, cities, roles, inter
   );
 };
 
-const JobModal = ({ isOpen, job, onClose, onSave, companies, cities, isSaving }) => {
-  const [d, setD] = useState(job?.id ? {...job} : { title: '', company: '', location: '' });
+const JobModal = ({ isOpen, job, onClose, onSave, options, isSaving }) => {
+  const [d, setD] = useState(job?.id ? {...job} : { title: '', company: '', location: '', status: 'Aberta' });
+  const { companies, cities } = options;
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
       <div className="bg-brand-card rounded-xl shadow-2xl w-full max-w-md border border-brand-border p-6">
         <h3 className="font-bold text-lg text-white mb-4">{d.id ? 'Editar Vaga' : 'Nova Vaga'}</h3>
         <input className="w-full bg-brand-dark border border-brand-border p-2 rounded mb-3 text-white" placeholder="Título" value={d.title} onChange={e=>setD({...d, title:e.target.value})}/>
-        <select className="w-full bg-brand-dark border border-brand-border p-2 rounded mb-3 text-white" value={d.company} onChange={e=>setD({...d, company:e.target.value})}><option value="">Empresa</option>{companies.map(c=><option key={c.id} value={c.name}>{c.name}</option>)}</select>
-        <select className="w-full bg-brand-dark border border-brand-border p-2 rounded mb-6 text-white" value={d.location} onChange={e=>setD({...d, location:e.target.value})}><option value="">Cidade</option>{cities.map(c=><option key={c.id} value={c.name}>{c.name}</option>)}</select>
+        <select className="w-full bg-brand-dark border border-brand-border p-2 rounded mb-3 text-white" value={d.company} onChange={e=>setD({...d, company:e.target.value})}><option value="">Selecione Empresa...</option>{companies.map(c=><option key={c.id} value={c.name}>{c.name}</option>)}</select>
+        <select className="w-full bg-brand-dark border border-brand-border p-2 rounded mb-3 text-white" value={d.location} onChange={e=>setD({...d, location:e.target.value})}><option value="">Selecione Cidade...</option>{cities.map(c=><option key={c.id} value={c.name}>{c.name}</option>)}</select>
+        
+        {d.id && (
+           <div className="mb-6">
+              <label className="block text-xs font-bold text-brand-cyan uppercase mb-1.5">Status</label>
+              <select className="w-full bg-brand-dark border border-brand-border p-2 rounded text-white" value={d.status} onChange={e=>setD({...d, status:e.target.value})}>
+                 {JOB_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+           </div>
+        )}
+
         <div className="flex justify-end gap-2"><button onClick={onClose} className="text-slate-400 px-4">Cancelar</button><button onClick={()=>onSave(d)} disabled={isSaving} className="bg-brand-orange text-white px-4 py-2 rounded">{isSaving ? 'Salvando...' : 'Salvar'}</button></div>
       </div>
     </div>

@@ -2,14 +2,16 @@
 
 export const PIPELINE_STAGES = [
   'Inscrito', 
-  'Considerado', // Item 1: Novo estágio
+  'Considerado', 
   'Primeira Entrevista', 
   'Testes', 
   'Segunda Entrevista', 
   'Selecionado', 
-  'Contratado',
-  'Reprovado' // Movido para o final do array lógico, embora visualmente possa ser tratado diferente
+  'Contratado', // Etapa de Sucesso (Won)
+  'Reprovado'   // Etapa de Perda (Lost)
 ];
+
+export const JOB_STATUSES = ['Aberta', 'Preenchida', 'Cancelada', 'Fechada'];
 
 export const STATUS_COLORS = {
   'Inscrito': 'bg-slate-700 text-slate-200 border-slate-600',

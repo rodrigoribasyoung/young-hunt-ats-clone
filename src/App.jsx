@@ -668,44 +668,108 @@ const CandidateModal = ({ candidate, onClose, onSave, options, isSaving }) => {
           ))}
         </div>
         <div className="p-8 overflow-y-auto custom-scrollbar flex-1 bg-brand-dark">
+          // Dentro do return do CandidateModal...
+
           {activeSection === 'pessoal' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="md:col-span-2 flex items-center gap-4 mb-2"><div className="w-20 h-20 rounded-full bg-slate-700 overflow-hidden border-2 border-brand-border shrink-0">{d.photoUrl ? <img src={d.photoUrl} className="w-full h-full object-cover"/> : <div className="w-full h-full flex items-center justify-center"><Users/></div>}</div><div className="flex-1"><Input label="Link da Foto" field="photoUrl" /></div></div>
-              <Input label="Nome Completo" field="fullName" />
-              <div className="grid grid-cols-2 gap-4"><Input label="Nascimento" field="birthDate" /><Input label="Idade" field="age" type="number" /></div>
+              <div className="md:col-span-2 flex items-center gap-4 mb-2">
+                 <div className="w-20 h-20 rounded-full bg-slate-700 overflow-hidden border-2 border-brand-border shrink-0">
+                    {d.photoUrl ? <img src={d.photoUrl} className="w-full h-full object-cover"/> : <div className="w-full h-full flex items-center justify-center"><Users/></div>}
+                 </div>
+                 <div className="flex-1"><Input label="Link da Foto" field="photoUrl" /></div>
+              </div>
+              
+              <div className="md:col-span-2"><Input label="Nome Completo" field="fullName" /></div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                  <Input label="Nascimento" field="birthDate" />
+                  <Input label="Idade" field="age" type="number" />
+              </div>
+              
               <Input label="E-mail" field="email" type="email" />
               <Input label="Celular / WhatsApp" field="phone" />
               <Select label="Cidade" field="city" list={cities} />
-              <div className="grid grid-cols-2 gap-4"><Select label="Estado Civil" field="maritalStatus" list={marital} /><Input label="Filhos" field="childrenCount" /></div>
-              <div className="mb-3"><label className="block text-xs font-bold text-brand-cyan uppercase mb-1.5">CNH</label><select className="w-full bg-brand-dark border border-brand-border p-2.5 rounded-lg text-sm text-white" value={d.hasLicense||''} onChange={e => setD({...d, hasLicense: e.target.value})}><option value="">Selecione</option><option value="Sim">Sim</option><option value="Não">Não</option></select></div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                  <Select label="Estado Civil" field="maritalStatus" list={marital} />
+                  <Input label="Filhos (Quantos)" field="childrenCount" />
+              </div>
+              
+              <div className="mb-3">
+                  <label className="block text-xs font-bold text-brand-cyan uppercase mb-1.5">Possui CNH B?</label>
+                  <select className="w-full bg-brand-dark border border-brand-border p-2.5 rounded-lg text-sm text-white" value={d.hasLicense||''} onChange={e => setD({...d, hasLicense: e.target.value})}>
+                      <option value="">Selecione</option>
+                      <option value="Sim">Sim</option>
+                      <option value="Não">Não</option>
+                  </select>
+              </div>
             </div>
           )}
+
           {activeSection === 'profissional' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-               <div className="md:col-span-2"><TextArea label="Resumo / Bio" field="freeField" /></div>
+               <div className="md:col-span-2"><TextArea label="Resumo / Bio / Campo Livre" field="freeField" /></div>
+               
                <Input label="Formação Acadêmica" field="education" />
                <Select label="Nível Escolaridade" field="schoolingLevel" list={schooling} />
-               <Input label="Instituição" field="institution" />
-               <div className="grid grid-cols-2 gap-4"><Input label="Formatura" field="graduationDate" /><Input label="Cursando?" field="isStudying" /></div>
-               <div className="md:col-span-2 mb-3"><label className="block text-xs font-bold text-brand-cyan uppercase mb-1.5">Área de Interesse</label><select className="w-full bg-brand-dark border border-brand-border p-2.5 rounded-lg text-sm text-white" value={d.interestAreas||''} onChange={e => setD({...d, interestAreas: e.target.value})}><option value="">Selecione...</option>{interestAreas.map(i => <option key={i.id} value={i.name}>{i.name}</option>)}</select></div>
-               <div className="md:col-span-2"><TextArea label="Experiência Anterior" field="experience" /><TextArea label="Cursos" field="courses" /></div>
-               <Input label="Link Currículo" field="cvUrl" /><Input label="Link Portfólio" field="portfolioUrl" />
+               
+               <div className="md:col-span-2"><Input label="Instituição de Ensino" field="institution" /></div>
+               
+               <div className="grid grid-cols-2 gap-4">
+                   <Input label="Data Formatura" field="graduationDate" />
+                   <Input label="Está Cursando?" field="isStudying" />
+               </div>
+
+               <div className="md:col-span-2 mb-3">
+                   <label className="block text-xs font-bold text-brand-cyan uppercase mb-1.5">Área de Interesse</label>
+                   <select className="w-full bg-brand-dark border border-brand-border p-2.5 rounded-lg text-sm text-white" value={d.interestAreas||''} onChange={e => setD({...d, interestAreas: e.target.value})}>
+                       <option value="">Selecione...</option>
+                       {interestAreas.map(i => <option key={i.id} value={i.name}>{i.name}</option>)}
+                   </select>
+               </div>
+
+               <div className="md:col-span-2"><TextArea label="Experiência Anterior" field="experience" /></div>
+               <div className="md:col-span-2"><TextArea label="Cursos e Certificações" field="courses" /></div>
+               <div className="md:col-span-2"><TextArea label="Referências Profissionais" field="references" /></div>
+
+               <Input label="Link Currículo" field="cvUrl" />
+               <Input label="Link Portfólio" field="portfolioUrl" />
             </div>
           )}
+
           {activeSection === 'processo' && (
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 <div><label className="block text-xs text-slate-400 mb-1">Vaga</label><select className="w-full bg-brand-dark border border-brand-border p-2 rounded text-white" value={d.jobId||''} onChange={e => setD({...d, jobId: e.target.value})}><option value="">Banco Geral</option>{jobs.map(j => <option key={j.id} value={j.id}>{j.title}</option>)}</select></div>
-                 <div><label className="block text-xs text-slate-400 mb-1">Status</label><select className="w-full bg-brand-dark border border-brand-border p-2 rounded text-white font-bold" value={d.status} onChange={e => setD({...d, status: e.target.value})}>{PIPELINE_STAGES.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
-                 <Select label="Origem" field="source" list={origins} />
-                 <Input label="Indicação" field="referral" />
+                 <div className="md:col-span-2"><Input label="Tipo de Candidatura" field="typeOfApp" /></div>
+                 
+                 <div>
+                     <label className="block text-xs text-slate-400 mb-1">Vaga Vinculada</label>
+                     <select className="w-full bg-brand-dark border border-brand-border p-2 rounded text-white" value={d.jobId||''} onChange={e => setD({...d, jobId: e.target.value})}>
+                         <option value="">Banco Geral</option>
+                         {jobs.map(j => <option key={j.id} value={j.id}>{j.title}</option>)}
+                     </select>
+                 </div>
+                 <div>
+                     <label className="block text-xs text-slate-400 mb-1">Status no Pipeline</label>
+                     <select className="w-full bg-brand-dark border border-brand-border p-2 rounded text-white font-bold" value={d.status} onChange={e => setD({...d, status: e.target.value})}>
+                         {PIPELINE_STAGES.map(s => <option key={s} value={s}>{s}</option>)}
+                     </select>
+                 </div>
+                 
+                 <Select label="Onde nos encontrou?" field="source" list={origins} />
+                 <Input label="Indicação (Quem indicou?)" field="referral" />
+                 
                  <Input label="Pretensão Salarial" field="salaryExpectation" />
-                 <Input label="Disponibilidade Mudança" field="canRelocate" />
+                 <Input label="Disp. Mudança de Cidade" field="canRelocate" />
               </div>
               <div className="bg-brand-card p-4 rounded-xl border border-brand-border">
-                 <h4 className="text-brand-orange font-bold text-sm mb-4">Histórico</h4>
-                 <div className="grid grid-cols-2 gap-4"><Input label="Data 1ª Entrevista" field="firstInterviewDate" type="datetime-local" /><Input label="Data 2ª Entrevista" field="secondInterviewDate" type="datetime-local" /></div>
-                 <TextArea label="Dados dos Testes" field="testData" /><TextArea label="Feedback" field="feedback" />
+                 <h4 className="text-brand-orange font-bold text-sm mb-4">Histórico Interno</h4>
+                 <div className="grid grid-cols-2 gap-4">
+                     <Input label="Data 1ª Entrevista" field="firstInterviewDate" type="datetime-local" />
+                     <Input label="Data 2ª Entrevista" field="secondInterviewDate" type="datetime-local" />
+                 </div>
+                 <TextArea label="Dados dos Testes" field="testData" />
+                 <TextArea label="Feedback / Observações" field="feedback" />
               </div>
             </div>
           )}

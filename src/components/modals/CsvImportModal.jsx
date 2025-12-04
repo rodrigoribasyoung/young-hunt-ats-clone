@@ -36,18 +36,35 @@ export default function CsvImportModal({ isOpen, onClose, onImportData }) {
         
         setParsedData(data);
         
-        // Auto-guess mapping
+        // ... dentro de handleFileUpload, após ler as linhas ...
+
+        setParsedData(data);
+        
+        // Auto-guess mapping (Lógica Melhorada para seus campos)
         const initialMap = {};
         head.forEach(h => {
-            const lowerH = h.toLowerCase();
-            if(lowerH.includes('nome')) initialMap[h] = 'fullName';
-            else if(lowerH.includes('mail')) initialMap[h] = 'email';
-            else if(lowerH.includes('tel') || lowerH.includes('cel')) initialMap[h] = 'phone';
-            else if(lowerH.includes('cidade')) initialMap[h] = 'city';
-            else if(lowerH.includes('vaga') || lowerH.includes('cargo')) initialMap[h] = 'role';
+            const lowerH = h.toLowerCase().trim();
+            
+            // Tenta encontrar correspondência exata ou aproximada na lista de constantes
+            const foundOption = CSV_FIELD_MAPPING_OPTIONS.find(opt => 
+                opt.label.toLowerCase() === lowerH || 
+                lowerH.includes(opt.label.toLowerCase())
+            );
+
+            if (foundOption) {
+                initialMap[h] = foundOption.value;
+            } else {
+                // Fallbacks genéricos caso o nome mude um pouco
+                if(lowerH.includes('nome')) initialMap[h] = 'fullName';
+                else if(lowerH.includes('mail')) initialMap[h] = 'email';
+                else if(lowerH.includes('cel') || lowerH.includes('whatsapp')) initialMap[h] = 'phone';
+                else if(lowerH.includes('cidade')) initialMap[h] = 'city';
+                else if(lowerH.includes('currículo') || lowerH.includes('cv')) initialMap[h] = 'cvUrl';
+            }
         });
         setMapping(initialMap);
         setStep(2);
+
       }
     };
     reader.readAsText(uploadedFile);
